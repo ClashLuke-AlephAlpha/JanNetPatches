@@ -1,0 +1,16 @@
+Index: src/dataclass.py
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/src/dataclass.py b/src/dataclass.py
+--- a/src/dataclass.py	(revision bf54e549878e4556d012a382f0243c5ef3356f82)
++++ b/src/dataclass.py	(revision 24b9a7c2e4575f64399c1c4ec159e8853815573b)
+@@ -73,6 +73,7 @@
+                                                  }
+         self.language_token_per_frame = 0
+         self.weight_decay = 0.1
++        self.grad_accumulation = 1
+         self.train_steps = 150_000
+         self.warmup_steps = 3000
+         self.learning_rate_decay_multi = 1
