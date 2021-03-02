@@ -1,0 +1,68 @@
+Index: scripts/text2tfrecord.py
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/scripts/text2tfrecord.py b/scripts/text2tfrecord.py
+--- a/scripts/text2tfrecord.py	(revision b2830fc0c8a021c912c635bb89f45e2690075233)
++++ b/scripts/text2tfrecord.py	(revision bf54e549878e4556d012a382f0243c5ef3356f82)
+@@ -26,7 +26,7 @@
+ parser.add_argument("--service_account_json_path", type=str, default="a.json", help="Service account json from gcp")
+ parser.add_argument("--buffer_size", type=int, default=2 ** 25, help="This is a minimum size, not a maximum size. "
+                                                                      "tfrecords will have this minimum size as well.")
+-parser.add_argument("--separator", nargs="+", type=int, default=50256,
++parser.add_argument("--separator", type=str, default="\04",
+                     help="separator to place between files in chunk mode."
+                          "Default is 0 (Null) in case of byte encodings, "
+                          "50256 for tokenized texts")
+Index: src/optimizers.py
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/src/optimizers.py b/src/optimizers.py
+--- a/src/optimizers.py	(revision b2830fc0c8a021c912c635bb89f45e2690075233)
++++ b/src/optimizers.py	(revision bf54e549878e4556d012a382f0243c5ef3356f82)
+@@ -95,11 +95,16 @@
+                         grad = grad_list[2]
+                         var: mtf.Variable = tensor_to_var[inp]
+                         optim = adam if var.shape.ndims == 0 else optimizer
+-                        #grd_norm = mtf.sqrt(mtf.reduce_sum(mtf.square(grad)) + 1e-5)
+-                        #wgt_norm = mtf.sqrt(mtf.reduce_sum(mtf.square(var.value)) + 1e-3)
+-                        #clipped = weighted_add(grd_norm / wgt_norm * params.gradient_clip * grad, grad,
++                        # grd_norm = mtf.sqrt(mtf.reduce_sum(mtf.square(grad)) + 1e-5)
++                        # wgt_norm = mtf.sqrt(mtf.reduce_sum(mtf.square(var.value)) + 1e-3)
++                        # grad = weighted_add(grd_norm / wgt_norm * params.gradient_clip * grad, grad,
+                         #                       mtf.cast(mtf.greater(wgt_norm / grd_norm, params.gradient_clip), dtype))
+-                        #weight_update, buffer = optim.apply_grad(clipped, var)
++                        if params.grad_accumulation > 1:
++                            grad_buffer = get_variable(params, var, "grad_accumulation", var.shape)
++                            step = mtf.cast(mtf.not_equal(mtf.mod(adam.global_step, params.grad_accumulation), 0),
++                                            var.dtype)
++                            update_ops.append(mtf.assign(grad_buffer, grad + grad_buffer.value * (1 - step)))
++                            grad = grad_buffer.value * step
+                         weight_update, buffer = optim.apply_grad(grad, var)
+                         if params.weight_decay > 0:
+                             weight_update += params.weight_decay * var.value
+@@ -111,7 +116,7 @@
+     return params.mesh.graph.trainable_variables[0].graph.combine_assignments(update_ops), learning_rate
+ 
+ 
+-def get_variable(params: ModelParameter, var, name, shape):
++def get_variable(params: ModelParameter, var, name, shape) -> mtf.Variable:
+     return mtf.get_variable(var.mesh, name, shape,
+                             initializer=tf.zeros_initializer(), trainable=False, dtype=params.variable_dtype)
+ 
+@@ -199,8 +204,8 @@
+                  for buf_ptr, dim in zip(buffer, update.shape.dims)])
+ 
+ 
+-OPTIMIZERS = {'adam':            Adam,
+-              'novograd':        NovoGrad,
+-              'sm3':             SM3,
+-              'sgd':             SGD
++OPTIMIZERS = {'adam':     Adam,
++              'novograd': NovoGrad,
++              'sm3':      SM3,
++              'sgd':      SGD
+               }
