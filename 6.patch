@@ -1,0 +1,17 @@
+Index: src/optimizers.py
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/src/optimizers.py b/src/optimizers.py
+--- a/src/optimizers.py	(revision f9aa0786b7df6d97812459bd28e7f1bc898ec54b)
++++ b/src/optimizers.py	(revision 9cc7dc4aaff25905c29efb77304d574c526e02ef)
+@@ -112,6 +112,8 @@
+                             weight_update += params.weight_decay * var.value
+                         if var.shape.size > 1:
+                             weight_update += mtf.reduce_mean(var.value)
++                        if params.grad_accumulation > 1:
++                            weight_update *= step
+                         update_ops.extend(buffer)
+                         update_ops.append(mtf.assign_sub(var, weight_update))
+ 
